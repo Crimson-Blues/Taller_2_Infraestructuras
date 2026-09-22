@@ -62,60 +62,58 @@ def escribir(input_queue, output_path):
             
 
 if __name__ == '__main__':
-    ruta_entrada = "texto_entrada.txt"
-    ruta_salida_secuencial = "texto_salida_secuencial.txt"
-    ruta_salida_paralela = "texto_salida_paralela.txt"
+    texts_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "texts")
+    os.makedirs(texts_folder, exist_ok=True) 
 
-    """
-    borrar txt ya existentes
-    """
-    for ruta in (ruta_salida_secuencial, ruta_salida_paralela):
+    input_path = os.path.join(texts_folder, "text_input.txt")
+    sequential_output_path = os.path.join(texts_folder, "text_output_sequential.txt")
+    parallel_output_path = os.path.join(texts_folder, "text_output_parallel.txt")
+
+    # borrar txt de corridas anteriores, para que cada ejecucion sea limpia
+    for ruta in (sequential_output_path, parallel_output_path):
         if os.path.exists(ruta):
             os.remove(ruta)
 
-    """
-    se crean colas de procesos
-    """
+    # una cola por cada conexion entre etapas
     cola_1 = multiprocessing.Queue()  # leer -> limpiar
     cola_2 = multiprocessing.Queue()  # limpiar -> mayusculas
     cola_3 = multiprocessing.Queue()  # mayusculas -> escribir
 
-    """
-    
-    """
-    p1 = multiprocessing.Process(target=leer, args=(ruta_entrada, cola_1))
+    # un proceso por cada etapa del pipeline
+    p1 = multiprocessing.Process(target=leer, args=(input_path, cola_1))
     p2 = multiprocessing.Process(target=limpiar, args=(cola_1, cola_2))
     p3 = multiprocessing.Process(target=mayusculas, args=(cola_2, cola_3))
-    p4 = multiprocessing.Process(target=escribir, args=(cola_3, ruta_salida_paralela))
+    p4 = multiprocessing.Process(target=escribir, args=(cola_3, parallel_output_path))
 
     inicio_tareas = time.time()
     for p in (p1, p2, p3, p4):
-        p.start()
+        p.start()  # lanza los 4 procesos, no espera a que terminen
     for p in (p1, p2, p3, p4):
-        p.join()
+        p.join()  # aqui si espera a que cada uno termine
     fin_tareas = time.time()
 
-    t_paralelo = fin_tareas-inicio_tareas
+    t_paralelo = fin_tareas - inicio_tareas
 
     inicio_secuencial = time.time()
-    procesar_texto_secuencial(ruta_entrada, ruta_salida_secuencial)
+    procesar_texto_secuencial(input_path, sequential_output_path)
     fin_secuencial = time.time()
 
-    t_secuencial = fin_secuencial-inicio_secuencial
+    t_secuencial = fin_secuencial - inicio_secuencial
 
-    print(f"Tiempo total de procesamiento por pipeline: {t_paralelo:.3f} segundos")
-    print(f"Archivo procesado paralelamente guardado en {ruta_salida_paralela}")
+    print(f"\nTiempo total de procesamiento por pipeline: {t_paralelo:.3f} segundos")
+    print(f"Archivo procesado paralelamente guardado en {parallel_output_path}")
 
-    print(f"Tiempo total de procesamiento secuencial: {t_secuencial:.3f} segundos")
-    print(f"Archivo procesado secuencialmente guardado en {ruta_salida_secuencial}")
+    print(f"\nTiempo total de procesamiento secuencial: {t_secuencial:.3f} segundos")
+    print(f"Archivo procesado secuencialmente guardado en {sequential_output_path}")
 
-    print(f"Speedup: {t_secuencial/t_paralelo:.2f}x")
+    print(f"\nSpeedup: {t_secuencial/t_paralelo:.2f}x")
 
-    with open(ruta_salida_secuencial, 'r') as f1, open(ruta_salida_paralela, 'r') as f2:
+    # compara el contenido de ambas salidas para verificar que el pipeline hizo lo mismo que el secuencial
+    with open(sequential_output_path, 'r') as f1, open(parallel_output_path, 'r') as f2:
         contenido_secuencial = f1.read()
         contenido_paralelo = f2.read()
 
     if contenido_secuencial == contenido_paralelo:
-        print("Los archivos de salida son iguales. El pipeline produce el mismo resultado que el secuencial.")
+        print("\nLos archivos de salida son iguales. El pipeline produce el mismo resultado que el secuencial.")
     else:
-        print("Los archivos de salida son diferentes. Revisa la lógica del pipeline.")
+        print("\nLos archivos de salida son diferentes. Revisa la lógica del pipeline.")
