@@ -101,10 +101,8 @@ if __name__ == '__main__':
     t_secuencial = fin_secuencial - inicio_secuencial
 
     print(f"\nTiempo total de procesamiento por pipeline: {t_paralelo:.3f} segundos")
-    print(f"Archivo procesado paralelamente guardado en {parallel_output_path}")
 
     print(f"\nTiempo total de procesamiento secuencial: {t_secuencial:.3f} segundos")
-    print(f"Archivo procesado secuencialmente guardado en {sequential_output_path}")
 
     print(f"\nSpeedup: {t_secuencial/t_paralelo:.2f}x")
 
